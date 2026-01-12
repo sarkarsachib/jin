@@ -6,6 +6,7 @@
 #include "../src/gpu/kernel_fusion.h"
 #include "../src/core/device.h"
 #include "../src/core/tensor.h"
+#include "../src/utils/perf_profiler.h"
 #include <iostream>
 #include <cstring>
 #include <thread>
@@ -13,7 +14,6 @@
 
 using namespace jin;
 using namespace jin::gpu;
-using namespace jin::utils;
 
 TEST(GpuRuntime_DeviceSelection) {
     // Test device selection
@@ -220,14 +220,15 @@ TEST(GpuRuntime_KernelFusionBasics) {
     ASSERT_TRUE(fusion.can_fuse(ops));
     
     auto candidates = fusion.find_fusion_candidates({}, ops);
-    ASSERT_GE(candidates.size(), 0);
+    // Note: candidates.size() returns size_t which is always >= 0, so this test is always true
+    // This is just testing that the function runs without error
     
     std::cout << "Kernel fusion basic test passed\n";
 }
 
 TEST(GpuRuntime_PerformanceProfiler) {
     // Test GPU performance profiler
-    utils::GpuProfiler profiler;
+    jin::utils::GpuProfiler profiler;
     
     // Test profiling control
     profiler.start_profiling("test_kernel", "cuda");

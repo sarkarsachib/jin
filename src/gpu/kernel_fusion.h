@@ -12,6 +12,9 @@
 namespace jin {
 namespace gpu {
 
+// Forward declaration
+struct FusionCandidate;
+
 // Kernel fusion optimization
 class KernelFusion {
 public:
