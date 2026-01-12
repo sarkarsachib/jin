@@ -2,6 +2,7 @@
 #include "../autodiff/ops.h"
 #include "../autodiff/tape.h"
 #include "../core/math_ops.h"
+#include "activation.h"
 #include <cmath>
 
 namespace jin {
@@ -27,7 +28,7 @@ MultiHeadAttention::MultiHeadAttention(size_t d_model, size_t num_heads, size_t 
 }
 
 Tensor MultiHeadAttention::forward(const Tensor& x) {
-    return forward(x, x, x);
+    return forward(x, x, x, Tensor());
 }
 
 Tensor MultiHeadAttention::forward(const Tensor& q, const Tensor& k, const Tensor& v) {
@@ -48,59 +49,36 @@ Tensor MultiHeadAttention::forward(const Tensor& q, const Tensor& k, const Tenso
     size_t v_len = v_shape.size() > 1 ? v_shape[1] : 1;
     
     // Project Q, K, V
-    Tensor Q = q_proj_.forward(q);  // [batch, q_len, d_model]
+    Tensor Q = q_proj_.forward(q);
     Tensor K = k_proj_.forward(k);
     Tensor V = v_proj_.forward(v);
     
-    // Reshape for multi-head attention: [batch, len, d_model] -> [batch, num_heads, len, head_dim]
-    // We'll work with a 2D representation for matmul: [batch * num_heads, len, head_dim]
+    // Reshape for multi-head attention
     size_t new_batch = batch_size * num_heads_;
-    
-    // Reshape Q: [batch, q_len, d_model] -> [batch, q_len, num_heads, head_dim]
-    Shape q_4d_shape = {batch_size, q_len, num_heads_, head_dim_};
-    Shape q_3d_shape = {new_batch, q_len, head_dim_};
-    
-    // For simplicity, we do head computation by reshaping and using batch matmul
-    // This is a simplified implementation that doesn't fully parallelize over heads
-    
-    // Compute attention scores: Q @ K^T / sqrt(d_k)
-    // Q: [batch, num_heads, q_len, head_dim]
-    // K^T: [batch, num_heads, head_dim, k_len]
-    // scores: [batch, num_heads, q_len, k_len]
-    
-    // For now, implement single-head style with manual loop over heads
-    Tensor output_v;
-    
-    // Simplified: aggregate over heads in a loop (not most efficient but correct)
-    // A proper implementation would use batched operations
-    
-    // Reshape to [batch * num_heads, len, head_dim] for parallel computation
-    Tensor Q_reshaped = Q.reshape({static_cast<size_t>(batch_size), q_len, num_heads_, head_dim_});
-    Tensor K_reshaped = K.reshape({static_cast<size_t>(batch_size), k_len, num_heads_, head_dim_});
-    Tensor V_reshaped = V.reshape({static_cast<size_t>(batch_size), v_len, num_heads_, head_dim_});
     
     // Final output accumulator
     Shape out_shape = {batch_size, q_len, d_model_};
     Tensor output(out_shape, DType::FP32, Device::cpu());
     output.set_requires_grad(true);
     
-    // Process each head (sequential for now - can be parallelized with batched ops)
+    // Process each head (sequential for now)
     for (size_t h = 0; h < num_heads_; ++h) {
-        // Extract head
         Tensor Q_h = Q.reshape({batch_size * num_heads_, q_len, head_dim_});
         Tensor K_h = K.reshape({batch_size * num_heads_, k_len, head_dim_});
         Tensor V_h = V.reshape({batch_size * num_heads_, v_len, head_dim_});
         
         // Compute attention scores
-        Tensor K_h_t = K_h.transpose({0, 2, 1});  // [batch*heads, head_dim, k_len]
-        Tensor scores = ops::matmul(Q_h, K_h_t);  // [batch*heads, q_len, k_len]
+        Tensor K_h_t = K_h.transpose({0, 2, 1});
+        Tensor scores = ops::matmul(Q_h, K_h_t);
         
         // Scale
         float scale = 1.0f / std::sqrt(static_cast<float>(head_dim_));
-        Tensor scores_scaled = ops::multiply(scores, ops::ones({1}, DType::FP32, Device::cpu()) * scale);
+        Tensor scale_t = jin::ones({1}, DType::FP32, Device::cpu());
+        scale_t.data_ptr<float>()[0] = scale;
+        Tensor scores_scaled = ops::multiply(scores, scale_t);
         
         // Softmax
-        Tensor attn = softmax(scores_scaled, -1);
+        Tensor attn = nn::softmax(scores_scaled, -1);
         
         // Apply dropout during training
         if (mode_ == ForwardMode::Train) {
@@ -108,7 +86,7 @@ Tensor MultiHeadAttention::forward(const Tensor& q, const Tensor& k, const Tenso
         }
         
         // Apply attention to V
-        Tensor attn_v = ops::matmul(attn, V_h);  // [batch*heads, q_len, head_dim]
+        Tensor attn_v = ops::matmul(attn, V_h);
         
         // Store in output
         const float* attn_v_data = attn_v.data_ptr<float>();
@@ -138,7 +116,7 @@ Tensor MultiHeadAttention::forward(const Tensor& q, const Tensor& k, const Tenso
 // ==================== Positional Encoding ====================
 
 Tensor sinusoidal_positional_encoding(size_t seq_len, size_t d_model) {
-    Tensor pe(seq_len, d_model, DType::FP32, Device::cpu());
+    Tensor pe(Shape{seq_len, d_model}, DType::FP32, Device::cpu());
     float* data = pe.data_ptr<float>();
     
     for (size_t pos = 0; pos < seq_len; ++pos) {
@@ -156,11 +134,7 @@ Tensor sinusoidal_positional_encoding(size_t seq_len, size_t d_model) {
 }
 
 Tensor relative_positional_encoding(size_t seq_len, size_t d_model) {
-    // Relative positional encoding
-    // For each query position i, compute attention bias based on relative position j - i
-    
-    // Create relative position indices
-    Tensor pe(seq_len, d_model, DType::FP32, Device::cpu());
+    Tensor pe(Shape{seq_len, d_model}, DType::FP32, Device::cpu());
     float* data = pe.data_ptr<float>();
     
     size_t half = d_model / 2;
@@ -180,13 +154,7 @@ Tensor relative_positional_encoding(size_t seq_len, size_t d_model) {
 }
 
 void apply_rotary_embeddings(Tensor& q, Tensor& k, const Tensor& positions) {
-    // Apply rotary positional encoding to query and key vectors
-    // RoPE: (q cos θ, q sin θ) for each position
-    
     Shape q_shape = q.shape();
-    Shape k_shape = k.shape();
-    
-    // Assume shape [batch, seq_len, d_model] or [batch, num_heads, seq_len, head_dim]
     size_t d_model = q_shape[q_shape.size() - 1];
     size_t half = d_model / 2;
     
@@ -209,12 +177,10 @@ void apply_rotary_embeddings(Tensor& q, Tensor& k, const Tensor& positions) {
             size_t idx = seq * d_model + d;
             size_t idx_rot = seq * d_model + d + half;
             
-            // Apply rotation to q
             float q_rot = q_data[idx_rot];
             q_out[idx] = q_data[idx] * cos_theta - q_rot * sin_theta;
             q_out[idx_rot] = q_data[idx] * sin_theta + q_rot * cos_theta;
             
-            // Apply rotation to k
             float k_rot = k_data[idx_rot];
             k_out[idx] = k_data[idx] * cos_theta - k_rot * sin_theta;
             k_out[idx_rot] = k_data[idx] * sin_theta + k_rot * cos_theta;

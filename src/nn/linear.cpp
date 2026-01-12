@@ -27,6 +27,7 @@ Tensor Linear::forward(const Tensor& input) {
     
     // input shape: [..., in_features]
     // weight shape: [out_features, in_features]
+    // We need weight^T: [in_features, out_features]
     
     // Reshape input to 2D: [batch, ..., in_features] -> [N, in_features]
     Shape input_shape = input.shape();
@@ -38,8 +39,11 @@ Tensor Linear::forward(const Tensor& input) {
     Shape flat_shape = {batch_size, in_features_};
     Tensor input_flat = input.reshape(flat_shape);
     
+    // Transpose weight from [out_features, in_features] to [in_features, out_features]
+    Tensor weight_t = weight_.transpose({1, 0});
+    
     // matmul: [N, in_features] x [in_features, out_features] -> [N, out_features]
-    Tensor output_flat = autodiff::matmul(input_flat, weight_);
+    Tensor output_flat = autodiff::matmul(input_flat, weight_t);
     
     if (has_bias_) {
         output_flat = autodiff::add(output_flat, bias_);

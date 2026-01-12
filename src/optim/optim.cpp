@@ -1,6 +1,8 @@
 #include "optim.h"
 #include "../autodiff/grad_registry.h"
 #include "../autodiff/backward.h"
+#include "../autodiff/ops.h"
+#include "../core/math_ops.h"
 #include <algorithm>
 #include <cmath>
 
@@ -48,11 +50,11 @@ bool Optimizer::has_grad(const Tensor& param) const {
 
 class SGDImpl : public Optimizer {
 public:
-    SGDImpl(float learning_rate, float momentum = 0.0f, float weight_decay = 0.0f);
+    SGDImpl(float learning_rate, float momentum, float weight_decay);
     
     void step() override;
     
-    void register_parameter(const Tensor& param) override;
+    void register_parameter(const Tensor& param);
     
 private:
     float momentum_;
@@ -81,7 +83,9 @@ void SGDImpl::step() {
         
         // Weight decay
         if (weight_decay_ > 0.0f) {
-            grad = autodiff::add(grad, ops::multiply(param, ops::ones({1}, DType::FP32, Device::cpu()) * weight_decay_));
+            Tensor decay = jin::ones({1}, DType::FP32, Device::cpu());
+            decay.data_ptr<float>()[0] = weight_decay_;
+            grad = autodiff::add(grad, autodiff::multiply(param, decay));
         }
         
         // Momentum
@@ -95,13 +99,13 @@ void SGDImpl::step() {
             }
             
             // Update: param = param - lr * velocity
-            float* param_data = param.data_ptr<float>();
+            float* param_data = const_cast<float*>(param.data_ptr<float>());
             for (size_t j = 0; j < param.size(); ++j) {
                 param_data[j] -= learning_rate_ * vel_out[j];
             }
         } else {
             // Simple SGD: param = param - lr * grad
-            float* param_data = param.data_ptr<float>();
+            float* param_data = const_cast<float*>(param.data_ptr<float>());
             const float* grad_data = grad.data_ptr<float>();
             
             for (size_t j = 0; j < param.size(); ++j) {
@@ -115,12 +119,12 @@ void SGDImpl::step() {
 
 class AdamImpl : public Optimizer {
 public:
-    AdamImpl(float learning_rate, float beta1 = 0.9f, float beta2 = 0.999f,
-             float eps = 1e-8f, float weight_decay = 0.0f);
+    AdamImpl(float learning_rate, float beta1, float beta2,
+             float eps, float weight_decay);
     
     void step() override;
     
-    void register_parameter(const Tensor& param) override;
+    void register_parameter(const Tensor& param);
     
 private:
     float beta1_;
@@ -166,7 +170,9 @@ void AdamImpl::step() {
         
         // Weight decay (L2 regularization)
         if (weight_decay_ > 0.0f) {
-            grad = autodiff::add(grad, ops::multiply(param, ops::ones({1}, DType::FP32, Device::cpu()) * weight_decay_));
+            Tensor decay = jin::ones({1}, DType::FP32, Device::cpu());
+            decay.data_ptr<float>()[0] = weight_decay_;
+            grad = autodiff::add(grad, autodiff::multiply(param, decay));
         }
         
         // Update biased first moment estimate
@@ -194,7 +200,7 @@ void AdamImpl::step() {
         float v_hat_scale = 1.0f / (1.0f - std::pow(beta2_, static_cast<float>(step_)));
         
         // Update parameters
-        float* param_data = param.data_ptr<float>();
+        float* param_data = const_cast<float*>(param.data_ptr<float>());
         for (size_t j = 0; j < param.size(); ++j) {
             float m_corrected = m_out[j] * m_hat_scale;
             float v_corrected = v_out[j] * v_hat_scale;
@@ -209,11 +215,11 @@ void AdamImpl::step() {
 
 class LionImpl : public Optimizer {
 public:
-    LionImpl(float learning_rate, float beta = 0.9f, float weight_decay = 0.0f);
+    LionImpl(float learning_rate, float beta, float weight_decay);
     
     void step() override;
     
-    void register_parameter(const Tensor& param) override;
+    void register_parameter(const Tensor& param);
     
 private:
     float beta_;
@@ -242,17 +248,17 @@ void LionImpl::step() {
         
         // Weight decay (sign-based)
         if (weight_decay_ > 0.0f) {
-            grad = autodiff::add(grad, ops::multiply(
-                ops::sign(param),
-                ops::ones({1}, DType::FP32, Device::cpu()) * weight_decay_
-            ));
+            Tensor sign = ops::sign(param);
+            Tensor decay = jin::ones({1}, DType::FP32, Device::cpu());
+            decay.data_ptr<float>()[0] = weight_decay_;
+            grad = autodiff::add(grad, autodiff::multiply(sign, decay));
         }
         
         // Sign-based update
         const float* update_data = update.data_ptr<float>();
         const float* grad_data = grad.data_ptr<float>();
         float* update_out = update.data_ptr<float>();
-        float* param_data = param.data_ptr<float>();
+        float* param_data = const_cast<float*>(param.data_ptr<float>());
         
         for (size_t j = 0; j < param.size(); ++j) {
             // momentum update
@@ -266,16 +272,16 @@ void LionImpl::step() {
 
 // ==================== Factory Functions ====================
 
-std::unique_ptr<Optimizer> create_sgd(float lr, float momentum = 0.0f, float wd = 0.0f) {
+std::unique_ptr<Optimizer> create_sgd(float lr, float momentum, float wd) {
     return std::make_unique<SGDImpl>(lr, momentum, wd);
 }
 
-std::unique_ptr<Optimizer> create_adam(float lr, float beta1 = 0.9f, float beta2 = 0.999f,
-                                        float eps = 1e-8f, float wd = 0.0f) {
+std::unique_ptr<Optimizer> create_adam(float lr, float beta1, float beta2,
+                                        float eps, float wd) {
     return std::make_unique<AdamImpl>(lr, beta1, beta2, eps, wd);
 }
 
-std::unique_ptr<Optimizer> create_lion(float lr, float beta = 0.9f, float wd = 0.0f) {
+std::unique_ptr<Optimizer> create_lion(float lr, float beta, float wd) {
     return std::make_unique<LionImpl>(lr, beta, wd);
 }
 
@@ -312,7 +318,7 @@ ReduceLROnPlateau::ReduceLROnPlateau(float initial_lr, float factor, int patienc
     : initial_lr_(initial_lr), factor_(factor), patience_(patience), min_lr_(min_lr),
       best_loss_(std::numeric_limits<float>::infinity()), num_bad_steps_(0) {}
 
-float ReduceLROnPlateau::get_lr(int step) const {
+float ReduceLROnPlateau::get_lr(int) const {
     return initial_lr_;
 }
 
