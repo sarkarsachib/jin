@@ -87,7 +87,7 @@ def build_library(mode='release'):
     
     # Find all source files
     src_files = []
-    for subdir in ['core', 'autodiff', 'utils']:
+    for subdir in ['core', 'autodiff', 'utils', 'nn', 'optim']:
         src_files.extend(find_sources(SRC_DIR / subdir, '*.cpp'))
     
     if not src_files:

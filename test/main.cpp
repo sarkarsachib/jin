@@ -4,6 +4,7 @@
 #include "test_ops.cpp"
 #include "test_autodiff.cpp"
 #include "test_utils.cpp"
+#include "test_nn.cpp"
 
 int main(int argc, char** argv) {
     std::string filter = "";
