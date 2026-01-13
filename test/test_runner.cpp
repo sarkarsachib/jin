@@ -117,5 +117,55 @@ public:
         } \
     } while(0)
 
+#define ASSERT_NE(a, b) \
+    do { \
+        if ((a) == (b)) { \
+            std::ostringstream oss; \
+            oss << "Assertion failed: " << #a << " != " << #b \
+                << " (values: " << (a) << " == " << (b) << ") at " << __FILE__ << ":" << __LINE__; \
+            throw std::runtime_error(oss.str()); \
+        } \
+    } while(0)
+
+#define ASSERT_GE(a, b) \
+    do { \
+        if ((a) < (b)) { \
+            std::ostringstream oss; \
+            oss << "Assertion failed: " << #a << " >= " << #b \
+                << " (values: " << (a) << " < " << (b) << ") at " << __FILE__ << ":" << __LINE__; \
+            throw std::runtime_error(oss.str()); \
+        } \
+    } while(0)
+
+#define ASSERT_GT(a, b) \
+    do { \
+        if ((a) <= (b)) { \
+            std::ostringstream oss; \
+            oss << "Assertion failed: " << #a << " > " << #b \
+                << " (values: " << (a) << " <= " << (b) << ") at " << __FILE__ << ":" << __LINE__; \
+            throw std::runtime_error(oss.str()); \
+        } \
+    } while(0)
+
+#define ASSERT_LT(a, b) \
+    do { \
+        if ((a) >= (b)) { \
+            std::ostringstream oss; \
+            oss << "Assertion failed: " << #a << " < " << #b \
+                << " (values: " << (a) << " >= " << (b) << ") at " << __FILE__ << ":" << __LINE__; \
+            throw std::runtime_error(oss.str()); \
+        } \
+    } while(0)
+
+#define ASSERT_LE(a, b) \
+    do { \
+        if ((a) > (b)) { \
+            std::ostringstream oss; \
+            oss << "Assertion failed: " << #a << " <= " << #b \
+                << " (values: " << (a) << " > " << (b) << ") at " << __FILE__ << ":" << __LINE__; \
+            throw std::runtime_error(oss.str()); \
+        } \
+    } while(0)
+
 } // namespace test
 } // namespace jin
