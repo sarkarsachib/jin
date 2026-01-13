@@ -4,6 +4,7 @@
 #include "frame_state.h"
 #include <vector>
 #include <deque>
+#include <cstring>
 
 namespace jin {
 namespace temporal {
@@ -23,19 +24,40 @@ public:
         // Serialization
         Tensor to_tensor() const {
             std::vector<Tensor> components;
-            
+
             if (background_latent.size() > 0) components.push_back(background_latent);
             if (lighting_latent.size() > 0) components.push_back(lighting_latent);
             if (camera_pose.size() > 0) components.push_back(camera_pose);
             if (env_features.size() > 0) components.push_back(env_features);
-            
+
             // Add metadata
             Tensor metadata = zeros({2});
             metadata.data_ptr<float>()[0] = static_cast<float>(frame_index);
             metadata.data_ptr<float>()[1] = timestamp;
             components.push_back(metadata);
-            
-            return concatenate_tensors(components);
+
+            // Simple concatenation for now
+            if (components.empty()) return Tensor();
+
+            size_t total_size = 0;
+            for (const auto& tensor : components) {
+                total_size += tensor.size();
+            }
+
+            Tensor result({static_cast<size_t>(total_size)});
+            size_t offset = 0;
+
+            for (const auto& tensor : components) {
+                size_t tensor_size = tensor.size() * sizeof(float);
+                std::memcpy(
+                    static_cast<char*>(result.data()) + offset,
+                    tensor.data(),
+                    tensor_size
+                );
+                offset += tensor.size();
+            }
+
+            return result;
         }
         
         // Deserialization
@@ -44,22 +66,22 @@ public:
             size_t offset = 0;
             
             if (bg_dim > 0) {
-                state.background_latent = tensor.view({bg_dim}).slice(offset, offset + bg_dim);
+                state.background_latent = tensor.view({static_cast<size_t>(bg_dim)}).slice(offset, offset + bg_dim);
                 offset += bg_dim;
             }
             
             if (light_dim > 0) {
-                state.lighting_latent = tensor.view({light_dim}).slice(offset, offset + light_dim);
+                state.lighting_latent = tensor.view({static_cast<size_t>(light_dim)}).slice(offset, offset + light_dim);
                 offset += light_dim;
             }
             
             if (cam_dim > 0) {
-                state.camera_pose = tensor.view({cam_dim}).slice(offset, offset + cam_dim);
+                state.camera_pose = tensor.view({static_cast<size_t>(cam_dim)}).slice(offset, offset + cam_dim);
                 offset += cam_dim;
             }
             
             if (env_dim > 0) {
-                state.env_features = tensor.view({env_dim}).slice(offset, offset + env_dim);
+                state.env_features = tensor.view({static_cast<size_t>(env_dim)}).slice(offset, offset + env_dim);
                 offset += env_dim;
             }
             
@@ -81,7 +103,7 @@ public:
             // Background consistency
             if (background_latent.size() > 0 && other.background_latent.size() > 0) {
                 Tensor diff = background_latent - other.background_latent;
-                float bg_consistency = 1.0f / (1.0f + sqrt(sum(pow(diff, 2.0f)).item()));
+                float bg_consistency = 1.0f / (1.0f + sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item()));
                 consistency += bg_consistency;
                 components++;
             }
@@ -89,7 +111,7 @@ public:
             // Lighting consistency
             if (lighting_latent.size() > 0 && other.lighting_latent.size() > 0) {
                 Tensor diff = lighting_latent - other.lighting_latent;
-                float light_consistency = 1.0f / (1.0f + sqrt(sum(pow(diff, 2.0f)).item()));
+                float light_consistency = 1.0f / (1.0f + sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item()));
                 consistency += light_consistency;
                 components++;
             }
@@ -97,7 +119,7 @@ public:
             // Camera pose consistency (position and orientation)
             if (camera_pose.size() > 0 && other.camera_pose.size() > 0) {
                 Tensor diff = camera_pose - other.camera_pose;
-                float cam_consistency = 1.0f / (1.0f + sqrt(sum(pow(diff, 2.0f)).item()));
+                float cam_consistency = 1.0f / (1.0f + sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item()));
                 consistency += cam_consistency;
                 components++;
             }
@@ -133,7 +155,7 @@ public:
         history_.push_back(new_state);
         
         // Keep only last max_history_ scenes
-        if (history_.size() > max_history_) {
+        if (history_.size() > static_cast<size_t>(max_history_)) {
             history_.pop_front();
         }
     }
@@ -159,7 +181,7 @@ public:
         
         history_.push_back(scene_state);
         
-        if (history_.size() > max_history_) {
+        if (history_.size() > static_cast<size_t>(max_history_)) {
             history_.pop_front();
         }
     }
@@ -283,7 +305,7 @@ private:
             total_size += tensor.size();
         }
         
-        Tensor result({static_cast<int>(total_size)});
+        Tensor result({static_cast<size_t>(total_size)});
         size_t offset = 0;
         
         for (const auto& tensor : tensors) {

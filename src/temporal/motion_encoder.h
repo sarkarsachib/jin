@@ -101,8 +101,9 @@ public:
         // Simple heuristic analysis
         // In practice, this would be learned patterns
         
-        float magnitude = sqrt(sum(pow(motion_code, 2.0f)).item());
-        pattern.action_intensity = std::min(magnitude / sqrt(motion_dim_), 1.0f);
+        float magnitude = std::sqrt(jin::ops::sum(jin::ops::pow(motion_code, 2.0f)).item());
+        float normalized_intensity = static_cast<float>(magnitude / std::sqrt(static_cast<double>(motion_dim_)));
+        pattern.action_intensity = std::min(normalized_intensity, 1.0f);
         
         // Motion smoothness (inverse of high-frequency components)
         float smoothness = 1.0f;
@@ -131,9 +132,9 @@ public:
         }
         
         // Cosine similarity
-        Tensor dot_product = sum(code1 * code2);
-        float norm1 = sqrt(sum(pow(code1, 2.0f)).item());
-        float norm2 = sqrt(sum(pow(code2, 2.0f)).item());
+        Tensor dot_product = jin::ops::sum(code1 * code2);
+        float norm1 = std::sqrt(jin::ops::sum(jin::ops::pow(code1, 2.0f)).item());
+        float norm2 = std::sqrt(jin::ops::sum(jin::ops::pow(code2, 2.0f)).item());
         
         if (norm1 == 0.0f || norm2 == 0.0f) return 0.0f;
         
@@ -156,12 +157,12 @@ private:
     // Pool deltas over sequence (mean pooling)
     Tensor pool_deltas(const std::vector<Tensor>& deltas) {
         if (deltas.empty()) {
-            return zeros({motion_dim_});
+            return zeros({static_cast<size_t>(motion_dim_)});
         }
         
         // Ensure all deltas have the same size
         if (deltas[0].size() == 0) {
-            return zeros({motion_dim_});
+            return zeros({static_cast<size_t>(motion_dim_)});
         }
         
         Tensor pooled = zeros(deltas[0].shape());
@@ -176,11 +177,11 @@ private:
     // Normalize and project to target dimension
     Tensor normalize_and_project(const Tensor& features) {
         if (features.size() == 0) {
-            return zeros({motion_dim_});
+            return zeros({static_cast<size_t>(motion_dim_)});
         }
         
         // L2 normalize
-        float norm = sqrt(sum(pow(features, 2.0f)).item());
+        float norm = std::sqrt(jin::ops::sum(jin::ops::pow(features, 2.0f)).item());
         Tensor normalized = norm > 0 ? features / norm : features;
         
         // Project to target dimension (simple resize/truncate)
@@ -188,10 +189,10 @@ private:
             return normalized;
         } else if (normalized.size() > static_cast<size_t>(motion_dim_)) {
             // Truncate
-            return normalized.view({motion_dim_});
+            return normalized.view({static_cast<size_t>(motion_dim_)});
         } else {
             // Pad with zeros
-            Tensor projected = zeros({motion_dim_});
+            Tensor projected = zeros({static_cast<size_t>(motion_dim_)});
             std::memcpy(
                 projected.data(),
                 normalized.data(),
@@ -205,9 +206,9 @@ private:
     float compute_variance(const Tensor& tensor) {
         if (tensor.size() == 0) return 0.0f;
         
-        float mean = sum(tensor).item() / tensor.size();
+        float mean = jin::ops::sum(tensor).item() / tensor.size();
         Tensor centered = tensor - mean;
-        return sum(pow(centered, 2.0f)).item() / tensor.size();
+        return jin::ops::sum(jin::ops::pow(centered, 2.0f)).item() / tensor.size();
     }
     
     // Simple walk cycle detection

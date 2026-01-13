@@ -113,12 +113,12 @@ struct FrameState {
         
         if (character_latent.size() > 0 && other.character_latent.size() > 0) {
             Tensor diff = character_latent - other.character_latent;
-            dist += sqrt(sum(pow(diff, 2.0f)).item());
+            dist += sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item());
         }
         
         if (scene_latent.size() > 0 && other.scene_latent.size() > 0) {
             Tensor diff = scene_latent - other.scene_latent;
-            dist += sqrt(sum(pow(diff, 2.0f)).item());
+            dist += sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item());
         }
         
         return dist;

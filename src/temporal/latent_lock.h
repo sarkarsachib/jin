@@ -33,8 +33,8 @@ public:
         if (!is_initialized_) return 0.0f;
         
         Tensor diff = current_latent - anchor_latent_;
-        Tensor squared_diff = pow(diff, 2.0f);
-        float drift = sqrt(sum(squared_diff).item());
+        Tensor squared_diff = jin::ops::pow(diff, 2.0f);
+        float drift = sqrt(jin::ops::sum(squared_diff).item());
         return drift;
     }
     
