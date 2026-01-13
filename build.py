@@ -178,15 +178,8 @@ def build_library(mode='release', backend='cpu'):
     
     # Find source files
     src_files = []
-    
-    # Always include base sources
-    for subdir in BASE_SOURCES:
-        src_files.extend(BASE_SOURCES[subdir])
-    
-    # Add GPU sources if backend is GPU
-    if backend != 'cpu':
-        if backend in GPU_SOURCES:
-            src_files.extend(GPU_SOURCES[backend])
+    for subdir in ['core', 'autodiff', 'utils', 'nn', 'optim']:
+        src_files.extend(find_sources(SRC_DIR / subdir, '*.cpp'))
     
     if not src_files:
         print("No source files found!")

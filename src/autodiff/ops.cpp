@@ -184,7 +184,7 @@ Tensor tanh(const Tensor& a) {
     
     auto backward_fn = [result](const Tensor& grad) -> std::vector<Tensor> {
         // d(tanh(a))/da = 1 - tanh(a)^2
-        Tensor ones_t = ones(result.shape(), result.dtype(), result.device());
+        Tensor ones_t = jin::ones(result.shape(), result.dtype(), result.device());
         Tensor tanh_sq = ops::multiply(result, result);
         Tensor grad_factor = ops::subtract(ones_t, tanh_sq);
         
@@ -205,7 +205,7 @@ Tensor sigmoid(const Tensor& a) {
     
     auto backward_fn = [result](const Tensor& grad) -> std::vector<Tensor> {
         // d(sigmoid(a))/da = sigmoid(a) * (1 - sigmoid(a))
-        Tensor ones_t = ones(result.shape(), result.dtype(), result.device());
+        Tensor ones_t = jin::ones(result.shape(), result.dtype(), result.device());
         Tensor one_minus_sig = ops::subtract(ones_t, result);
         Tensor grad_factor = ops::multiply(result, one_minus_sig);
         
@@ -306,6 +306,88 @@ Tensor mean(const Tensor& a, int axis, bool keepdims) {
     }
     
     return result;
+}
+
+Tensor sqrt(const Tensor& a) {
+    Tensor result = ops::sqrt(a);
+    
+    auto backward_fn = [result](const Tensor& grad) -> std::vector<Tensor> {
+        // d(sqrt(a))/da = 1 / (2 * sqrt(a))
+        Tensor half = ops::multiply(jin::ones(result.shape(), result.dtype(), result.device()),
+                                    jin::ones({1}, DType::FP32, Device::cpu()));
+        // Scale by 0.5
+        float* half_data = half.data_ptr<float>();
+        for (size_t i = 0; i < half.size(); ++i) {
+            half_data[i] *= 0.5f;
+        }
+        Tensor inv_two_sqrt = ops::divide(half, result);
+        return {ops::multiply(grad, inv_two_sqrt)};
+    };
+    
+    GradientTape::instance().record({a}, result, backward_fn, "sqrt");
+    
+    if (a.requires_grad()) {
+        result.set_requires_grad(true);
+    }
+    
+    return result;
+}
+
+Tensor abs(const Tensor& a) {
+    Tensor result = ops::abs(a);
+    
+    auto backward_fn = [a](const Tensor& grad) -> std::vector<Tensor> {
+        // d(abs(a))/da = sign(a)
+        Tensor sign = ops::sign(a);
+        return {ops::multiply(grad, sign)};
+    };
+    
+    GradientTape::instance().record({a}, result, backward_fn, "abs");
+    
+    if (a.requires_grad()) {
+        result.set_requires_grad(true);
+    }
+    
+    return result;
+}
+
+Tensor clamp(const Tensor& a, float min_val, float max_val) {
+    Tensor result = ops::clamp(a, min_val, max_val);
+    
+    // Clamp has subgradient at boundaries
+    // For simplicity, we use a straight-through estimator
+    auto backward_fn = [a, min_val, max_val](const Tensor& grad) -> std::vector<Tensor> {
+        Tensor grad_a(a.shape(), a.dtype(), a.device());
+        const float* a_data = a.data_ptr<float>();
+        const float* grad_data = grad.data_ptr<float>();
+        float* grad_a_data = grad_a.data_ptr<float>();
+        
+        for (size_t i = 0; i < a.size(); ++i) {
+            if (a_data[i] < min_val || a_data[i] > max_val) {
+                grad_a_data[i] = 0.0f;  // No gradient outside clamp range
+            } else {
+                grad_a_data[i] = grad_data[i];
+            }
+        }
+        
+        return {grad_a};
+    };
+    
+    GradientTape::instance().record({a}, result, backward_fn, "clamp");
+    
+    if (a.requires_grad()) {
+        result.set_requires_grad(true);
+    }
+    
+    return result;
+}
+
+Tensor ones(const Shape& shape, DType dtype, Device device) {
+    return jin::ones(shape, dtype, device);
+}
+
+Tensor zeros(const Shape& shape, DType dtype, Device device) {
+    return jin::zeros(shape, dtype, device);
 }
 
 } // namespace autodiff

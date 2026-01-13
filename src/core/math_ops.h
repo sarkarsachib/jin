@@ -21,6 +21,11 @@ Tensor relu(const Tensor& a);
 Tensor tanh(const Tensor& a);
 Tensor sigmoid(const Tensor& a);
 Tensor neg(const Tensor& a);
+Tensor sqrt(const Tensor& a);
+Tensor abs(const Tensor& a);
+Tensor clamp(const Tensor& a, float min_val, float max_val);
+Tensor sign(const Tensor& a);
+Tensor square(const Tensor& a);
 
 // Reduction operations
 Tensor sum(const Tensor& a, int axis = -1, bool keepdims = false);
