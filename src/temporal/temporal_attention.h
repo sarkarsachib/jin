@@ -1,9 +1,11 @@
 #pragma once
 
 #include "../core/tensor.h"
-#include "../autodiff/graph.h"
+#include "../core/math_ops.h"
 #include <vector>
 #include <algorithm>
+#include <cmath>
+#include <cstring>
 
 namespace jin {
 namespace temporal {
@@ -143,7 +145,7 @@ private:
         if (a.size() != b.size() || a.size() == 0) return 0.0f;
         
         Tensor elementwise_prod = a * b;
-        return sum(elementwise_prod).item();
+        return jin::ops::sum(elementwise_prod).item();
     }
     
     // Apply softmax for numerical stability
@@ -158,7 +160,7 @@ private:
         }
         
         // Compute softmax
-        Tensor softmax_scores({static_cast<int>(scores.size())});
+        Tensor softmax_scores({static_cast<size_t>(scores.size())});
         float sum_exp = 0.0f;
         
         for (size_t i = 0; i < scores.size(); ++i) {
@@ -204,10 +206,10 @@ private:
         const Tensor& attended_features
     ) {
         // Simple gating mechanism
-        Tensor gate = sigmoid(compute_gate_value(current_frame_feat, attended_features));
+        float gate_value = sigmoid(compute_gate_value(current_frame_feat, attended_features));
         
         // Fuse: result = current * gate + attended * (1 - gate)
-        Tensor fused = current_frame_feat * gate + attended_features * (1.0f - gate);
+        Tensor fused = current_frame_feat * gate_value + attended_features * (1.0f - gate_value);
         
         return fused;
     }
@@ -235,7 +237,7 @@ private:
             total_size += tensor.size();
         }
         
-        Tensor result({static_cast<int>(total_size)});
+        Tensor result({static_cast<size_t>(total_size)});
         size_t offset = 0;
         
         for (const auto& tensor : tensors) {

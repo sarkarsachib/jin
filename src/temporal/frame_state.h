@@ -68,7 +68,7 @@ struct FrameState {
         
         // Extract emotion embedding
         if (emotion_dim > 0 && offset + emotion_dim <= tensor.size()) {
-            state.emotion_embedding = tensor.view({emotion_dim}).slice(offset, offset + emotion_dim);
+            state.emotion_embedding = tensor.view({static_cast<size_t>(emotion_dim)}).slice(offset, offset + emotion_dim);
             offset += emotion_dim;
         }
         
@@ -125,13 +125,15 @@ struct FrameState {
     }
 };
 
-// Hash specialization for unordered_map
-template<>
-struct std::hash<FrameState> {
-    size_t operator()(const FrameState& state) const {
-        return state.hash();
-    }
-};
-
 } // namespace temporal
 } // namespace jin
+
+// Hash specialization for unordered_map (must be in global std namespace)
+namespace std {
+    template<>
+    struct hash<jin::temporal::FrameState> {
+        size_t operator()(const jin::temporal::FrameState& state) const {
+            return state.hash();
+        }
+    };
+}

@@ -155,8 +155,8 @@ private:
         if (a.size() != b.size() || a.size() == 0) return 0.0f;
         
         Tensor diff = a - b;
-        Tensor squared_diff = pow(diff, 2.0f);
-        return sqrt(sum(squared_diff).item());
+        Tensor squared_diff = jin::ops::pow(diff, 2.0f);
+        return std::sqrt(jin::ops::sum(squared_diff).item());
     }
 };
 

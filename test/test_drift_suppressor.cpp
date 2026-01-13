@@ -117,8 +117,8 @@ void test_drift_suppressor_correction_application() {
         ASSERT(corrected.size() == current_latent.size(), "Corrected tensor should have same size");
         
         // Correction should move toward reference
-        float original_distance = (current_latent - reference).sqrt().sum().item();
-        float corrected_distance = (corrected - reference).sqrt().sum().item();
+        float original_distance = std::sqrt(jin::ops::sum(jin::ops::pow(current_latent - reference, 2.0f)).item());
+        float corrected_distance = std::sqrt(jin::ops::sum(jin::ops::pow(corrected - reference, 2.0f)).item());
         ASSERT(corrected_distance < original_distance, "Correction should reduce drift");
     }
     
@@ -154,8 +154,8 @@ void test_drift_suppressor_smoothing() {
         if (corrections[i].correction_vector.size() > 0 && 
             corrections[i-1].correction_vector.size() > 0) {
             // Smoothing should prevent abrupt changes in correction magnitude
-            float current_mag = corrections[i].correction_vector.sqrt().sum().item();
-            float prev_mag = corrections[i-1].correction_vector.sqrt().sum().item();
+            float current_mag = std::sqrt(jin::ops::sum(jin::ops::pow(corrections[i].correction_vector, 2.0f)).item());
+            float prev_mag = std::sqrt(jin::ops::sum(jin::ops::pow(corrections[i-1].correction_vector, 2.0f)).item());
             float change_ratio = std::abs(current_mag - prev_mag) / std::max(prev_mag, 1e-5f);
             ASSERT(change_ratio < 2.0f, "Smoothing should prevent abrupt correction changes");
         }

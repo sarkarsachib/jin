@@ -3,6 +3,8 @@
 #include "../core/tensor.h"
 #include "../core/math_ops.h"
 #include <vector>
+#include <cmath>
+#include <cstring>
 
 namespace jin {
 namespace temporal {

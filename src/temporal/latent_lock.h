@@ -53,13 +53,13 @@ public:
         // Character drift
         if (current_state.character_latent.size() > 0) {
             Tensor diff = current_state.character_latent - anchor_latent_;
-            drift.character_drift = sqrt(sum(pow(diff, 2.0f)).item());
+            drift.character_drift = std::sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item());
         }
         
         // Scene drift (if we have scene information)
         if (current_state.scene_latent.size() > 0) {
             Tensor diff = current_state.scene_latent - anchor_latent_;
-            drift.scene_drift = sqrt(sum(pow(diff, 2.0f)).item());
+            drift.scene_drift = std::sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item());
         }
         
         drift.total_drift = (drift.character_drift + drift.scene_drift) * 0.5f;

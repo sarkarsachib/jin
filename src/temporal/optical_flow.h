@@ -50,8 +50,8 @@ public:
     float flow_magnitude(const Tensor& flow) {
         if (flow.size() == 0) return 0.0f;
         
-        Tensor squared_flow = pow(flow, 2.0f);
-        return sqrt(sum(squared_flow).item());
+        Tensor squared_flow = jin::ops::pow(flow, 2.0f);
+        return std::sqrt(jin::ops::sum(squared_flow).item());
     }
     
     // Get average flow magnitude over a sequence

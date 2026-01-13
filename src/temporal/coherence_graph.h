@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <queue>
+#include <cmath>
 
 namespace jin {
 namespace temporal {
@@ -45,7 +46,7 @@ public:
         nodes_.push_back(new_node);
         
         // Keep only last max_frames_ to prevent memory blowup
-        if (nodes_.size() > max_frames_) {
+        if (nodes_.size() > static_cast<size_t>(max_frames_)) {
             nodes_.erase(nodes_.begin());
         }
     }
@@ -175,7 +176,7 @@ private:
         // Character latent coherence
         if (a.character_latent.size() > 0 && b.character_latent.size() > 0) {
             Tensor diff = a.character_latent - b.character_latent;
-            float char_coherence = 1.0f / (1.0f + sqrt(sum(pow(diff, 2.0f)).item()));
+            float char_coherence = 1.0f / (1.0f + std::sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item()));
             coherence += char_coherence;
             components++;
         }
@@ -183,7 +184,7 @@ private:
         // Scene latent coherence
         if (a.scene_latent.size() > 0 && b.scene_latent.size() > 0) {
             Tensor diff = a.scene_latent - b.scene_latent;
-            float scene_coherence = 1.0f / (1.0f + sqrt(sum(pow(diff, 2.0f)).item()));
+            float scene_coherence = 1.0f / (1.0f + std::sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item()));
             coherence += scene_coherence;
             components++;
         }
