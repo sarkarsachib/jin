@@ -1,11 +1,16 @@
 #pragma once
 
 #include "../core/tensor.h"
+#include "../core/math_ops.h"
 #include <vector>
 #include <string>
+#include <cmath>
 
 namespace jin {
 namespace temporal {
+
+// Forward declaration for concatenate function
+Tensor concatenate(const std::vector<Tensor>& tensors, int dim);
 
 struct FrameState {
     Tensor character_latent;      // [latent_dim] - compressed character identity

@@ -2,6 +2,7 @@
 #include "../core/tensor.h"
 #include "../core/math_ops.h"
 #include <cmath>
+#include <cstring>
 
 namespace jin {
 namespace temporal {
@@ -15,13 +16,13 @@ Tensor concatenate(const std::vector<Tensor>& tensors, int dim) {
         total_size += tensor.size();
     }
     
-    Tensor result({static_cast<int>(total_size)});
+    Tensor result({static_cast<size_t>(total_size)});
     size_t offset = 0;
     
     for (const auto& tensor : tensors) {
         size_t tensor_size = tensor.size() * sizeof(float);
         std::memcpy(
-            static_cast<char*>(result.data()) + offset,
+            static_cast<char*>(result.data()) + offset * sizeof(float),
             tensor.data(),
             tensor_size
         );
