@@ -70,6 +70,24 @@ public:
     Tensor transpose(const std::vector<int>& axes = {}) const;
     Tensor view(const Shape& new_shape) const;
     
+    // Arithmetic operations (element-wise)
+    Tensor operator+(const Tensor& other) const;
+    Tensor operator-(const Tensor& other) const;
+    Tensor operator*(const Tensor& other) const;
+    Tensor operator/(const Tensor& other) const;
+    
+    Tensor operator+(float scalar) const;
+    Tensor operator-(float scalar) const;
+    Tensor operator*(float scalar) const;
+    Tensor operator/(float scalar) const;
+    
+    Tensor pow(float exponent) const;
+    Tensor sqrt() const;
+    Tensor abs() const;
+    
+    // Slicing operations
+    Tensor slice(size_t start, size_t end) const;
+    
     // Gradient
     Tensor grad() const;
     void set_grad(const Tensor& grad);
@@ -82,6 +100,7 @@ public:
     
     // Utility
     std::string to_string() const;
+    Tensor clone() const;
     
 private:
     Shape shape_;

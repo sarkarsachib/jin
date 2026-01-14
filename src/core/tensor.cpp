@@ -1,4 +1,5 @@
 #include "tensor.h"
+#include "math_ops.h"
 #include "../utils/logger.h"
 #include <cstring>
 #include <cmath>
@@ -182,6 +183,71 @@ Tensor Tensor::view(const Shape& new_shape) const {
     return reshape(new_shape);
 }
 
+// Arithmetic operations
+Tensor Tensor::operator+(const Tensor& other) const {
+    return jin::ops::add(*this, other);
+}
+
+Tensor Tensor::operator-(const Tensor& other) const {
+    return jin::ops::subtract(*this, other);
+}
+
+Tensor Tensor::operator*(const Tensor& other) const {
+    return jin::ops::multiply(*this, other);
+}
+
+Tensor Tensor::operator/(const Tensor& other) const {
+    return jin::ops::divide(*this, other);
+}
+
+Tensor Tensor::operator+(float scalar) const {
+    Tensor scalar_tensor({1}, dtype(), device());
+    scalar_tensor.fill(scalar);
+    return jin::ops::add(*this, scalar_tensor);
+}
+
+Tensor Tensor::operator-(float scalar) const {
+    Tensor scalar_tensor({1}, dtype(), device());
+    scalar_tensor.fill(scalar);
+    return jin::ops::subtract(*this, scalar_tensor);
+}
+
+Tensor Tensor::operator*(float scalar) const {
+    Tensor scalar_tensor({1}, dtype(), device());
+    scalar_tensor.fill(scalar);
+    return jin::ops::multiply(*this, scalar_tensor);
+}
+
+Tensor Tensor::operator/(float scalar) const {
+    Tensor scalar_tensor({1}, dtype(), device());
+    scalar_tensor.fill(scalar);
+    return jin::ops::divide(*this, scalar_tensor);
+}
+
+Tensor Tensor::pow(float exponent) const {
+    return jin::ops::pow(*this, exponent);
+}
+
+Tensor Tensor::sqrt() const {
+    return jin::ops::sqrt(*this);
+}
+
+Tensor Tensor::abs() const {
+    return jin::ops::abs(*this);
+}
+
+Tensor Tensor::slice(size_t start, size_t end) const {
+    if (start >= size() || end > size() || start >= end) {
+        return Tensor();  // Return empty tensor for invalid slice
+    }
+    
+    size_t slice_size = end - start;
+    Shape new_shape({slice_size});
+    
+    // Create a new tensor view
+    return Tensor(new_shape, storage_, compute_strides(new_shape), offset_ + start);
+}
+
 std::string Tensor::to_string() const {
     std::ostringstream oss;
     oss << "Tensor(shape=" << shape_to_string(shape_)
@@ -190,6 +256,26 @@ std::string Tensor::to_string() const {
         << ", requires_grad=" << (requires_grad_ ? "true" : "false")
         << ")";
     return oss.str();
+}
+
+Tensor Tensor::clone() const {
+    // Create a new tensor with the same data
+    Tensor cloned(shape_, dtype(), device());
+    
+    // Copy the data
+    if (storage_ && cloned.storage_) {
+        std::memcpy(cloned.data(), data(), size() * dtype_size(dtype()));
+    }
+    
+    // Copy gradient if it exists
+    if (grad_) {
+        cloned.grad_ = std::make_shared<Tensor>(grad_->clone());
+    }
+    
+    // Copy other properties
+    cloned.requires_grad_ = requires_grad_;
+    
+    return cloned;
 }
 
 // Factory functions

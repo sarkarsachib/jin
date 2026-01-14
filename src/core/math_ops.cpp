@@ -196,6 +196,42 @@ Tensor neg(const Tensor& a) {
     return out;
 }
 
+Tensor pow(const Tensor& a, float exponent) {
+    Tensor out(a.shape(), a.dtype(), a.device());
+    const float* a_data = a.data_ptr<float>();
+    float* out_data = out.data_ptr<float>();
+    
+    for (size_t i = 0; i < a.size(); ++i) {
+        out_data[i] = std::pow(a_data[i], exponent);
+    }
+    
+    return out;
+}
+
+Tensor sqrt(const Tensor& a) {
+    Tensor out(a.shape(), a.dtype(), a.device());
+    const float* a_data = a.data_ptr<float>();
+    float* out_data = out.data_ptr<float>();
+    
+    for (size_t i = 0; i < a.size(); ++i) {
+        out_data[i] = std::sqrt(a_data[i]);
+    }
+    
+    return out;
+}
+
+Tensor abs(const Tensor& a) {
+    Tensor out(a.shape(), a.dtype(), a.device());
+    const float* a_data = a.data_ptr<float>();
+    float* out_data = out.data_ptr<float>();
+    
+    for (size_t i = 0; i < a.size(); ++i) {
+        out_data[i] = std::abs(a_data[i]);
+    }
+    
+    return out;
+}
+
 Tensor sum(const Tensor& a, int axis, bool keepdims) {
     if (axis == -1) {
         // Sum all elements
