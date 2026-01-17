@@ -313,30 +313,6 @@ Tensor mean(const Tensor& a, int axis, bool keepdims) {
     return sum_result;
 }
 
-Tensor sqrt(const Tensor& a) {
-    Tensor out(a.shape(), a.dtype(), a.device());
-    const float* a_data = a.data_ptr<float>();
-    float* out_data = out.data_ptr<float>();
-    
-    for (size_t i = 0; i < a.size(); ++i) {
-        out_data[i] = std::sqrt(a_data[i]);
-    }
-    
-    return out;
-}
-
-Tensor abs(const Tensor& a) {
-    Tensor out(a.shape(), a.dtype(), a.device());
-    const float* a_data = a.data_ptr<float>();
-    float* out_data = out.data_ptr<float>();
-    
-    for (size_t i = 0; i < a.size(); ++i) {
-        out_data[i] = std::abs(a_data[i]);
-    }
-    
-    return out;
-}
-
 Tensor clamp(const Tensor& a, float min_val, float max_val) {
     Tensor out(a.shape(), a.dtype(), a.device());
     const float* a_data = a.data_ptr<float>();
