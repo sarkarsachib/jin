@@ -180,6 +180,7 @@ def build_library(mode='release', backend='cpu'):
     src_files = []
     for subdir in ['core', 'autodiff', 'utils', 'nn', 'optim', 'diffusion', 'temporal']:
         src_files.extend(find_sources(SRC_DIR / subdir, '*.cpp'))
+        src_files.extend(find_sources(SRC_DIR / subdir, '*.mm'))
     
     if not src_files:
         print("No source files found!")
