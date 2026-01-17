@@ -97,7 +97,61 @@ Tensor Conv1d::forward(const Tensor& x) {
             }
         }
     }
-    
+
+    auto backward_fn = [x, weight = weight_, bias = bias_, in_channels = in_channels_, out_channels = out_channels_,
+                        kernel = kernel_size_, stride = stride_, padding = padding_, dilation = dilation_,
+                        in_len, out_len](const Tensor& grad) -> std::vector<Tensor> {
+
+        Tensor grad_x(x.shape(), x.dtype(), x.device());
+        grad_x.fill(0.0f);
+        Tensor grad_w(weight.shape(), weight.dtype(), weight.device());
+        grad_w.fill(0.0f);
+        Tensor grad_b(bias.shape(), bias.dtype(), bias.device());
+        grad_b.fill(0.0f);
+
+        const float* x_data = x.data_ptr<float>();
+        const float* w_data = weight.data_ptr<float>();
+        const float* g_data = grad.data_ptr<float>();
+        float* gx = grad_x.data_ptr<float>();
+        float* gw = grad_w.data_ptr<float>();
+        float* gb = grad_b.data_ptr<float>();
+
+        size_t B = x.shape()[0];
+
+        for (size_t b = 0; b < B; ++b) {
+            for (size_t oc = 0; oc < out_channels; ++oc) {
+                for (size_t o = 0; o < out_len; ++o) {
+                    size_t out_idx = ((b * out_channels + oc) * out_len) + o;
+                    float dy = g_data[out_idx];
+                    gb[oc] += dy;
+
+                    for (size_t ic = 0; ic < in_channels; ++ic) {
+                        for (size_t k = 0; k < kernel; ++k) {
+                            size_t pos = o * stride + k * dilation;
+                            if (pos < padding) continue;
+                            pos -= padding;
+                            if (pos >= in_len) continue;
+
+                            size_t x_idx = ((b * in_channels + ic) * in_len) + pos;
+                            size_t w_idx = ((oc * in_channels + ic) * kernel) + k;
+
+                            float x_val = x_data[x_idx];
+                            gw[w_idx] += dy * x_val;
+                            gx[x_idx] += dy * w_data[w_idx];
+                        }
+                    }
+                }
+            }
+        }
+
+        return {grad_x, grad_w, grad_b};
+    };
+
+    autodiff::GradientTape::instance().record({x, weight_, bias_}, out, backward_fn, "conv1d");
+    if (x.requires_grad() || weight_.requires_grad() || bias_.requires_grad()) {
+        out.set_requires_grad(true);
+    }
+
     return out;
 }
 
@@ -198,7 +252,70 @@ Tensor Conv2d::forward(const Tensor& x) {
             }
         }
     }
-    
+
+    // Record for autodiff
+    auto backward_fn = [x, weight = weight_, bias = bias_, in_channels = in_channels_, out_channels = out_channels_,
+                        kernel = kernel_size_, stride_h = stride_h_, stride_w = stride_w_,
+                        pad_h = padding_h_, pad_w = padding_w_, dil_h = dilation_h_, dil_w = dilation_w_,
+                        in_h, in_w, out_h, out_w](const Tensor& grad) -> std::vector<Tensor> {
+
+        Tensor grad_x(x.shape(), x.dtype(), x.device());
+        grad_x.fill(0.0f);
+        Tensor grad_w(weight.shape(), weight.dtype(), weight.device());
+        grad_w.fill(0.0f);
+        Tensor grad_b(bias.shape(), bias.dtype(), bias.device());
+        grad_b.fill(0.0f);
+
+        const float* x_data = x.data_ptr<float>();
+        const float* w_data = weight.data_ptr<float>();
+        const float* g_data = grad.data_ptr<float>();
+        float* gx = grad_x.data_ptr<float>();
+        float* gw = grad_w.data_ptr<float>();
+        float* gb = grad_b.data_ptr<float>();
+
+        for (size_t b = 0; b < x.shape()[0]; ++b) {
+            for (size_t oc = 0; oc < out_channels; ++oc) {
+                for (size_t oh = 0; oh < out_h; ++oh) {
+                    for (size_t ow = 0; ow < out_w; ++ow) {
+                        size_t out_idx = (((b * out_channels + oc) * out_h + oh) * out_w) + ow;
+                        float dy = g_data[out_idx];
+                        gb[oc] += dy;
+
+                        for (size_t ic = 0; ic < in_channels; ++ic) {
+                            for (size_t kh = 0; kh < kernel; ++kh) {
+                                size_t ih = oh * stride_h + kh * dil_h;
+                                if (ih < pad_h) continue;
+                                ih -= pad_h;
+                                if (ih >= in_h) continue;
+
+                                for (size_t kw = 0; kw < kernel; ++kw) {
+                                    size_t iw = ow * stride_w + kw * dil_w;
+                                    if (iw < pad_w) continue;
+                                    iw -= pad_w;
+                                    if (iw >= in_w) continue;
+
+                                    size_t x_idx = (((b * in_channels + ic) * in_h + ih) * in_w) + iw;
+                                    size_t w_idx = (((oc * in_channels + ic) * kernel + kh) * kernel) + kw;
+
+                                    float x_val = x_data[x_idx];
+                                    gw[w_idx] += dy * x_val;
+                                    gx[x_idx] += dy * w_data[w_idx];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return {grad_x, grad_w, grad_b};
+    };
+
+    autodiff::GradientTape::instance().record({x, weight_, bias_}, out, backward_fn, "conv2d");
+    if (x.requires_grad() || weight_.requires_grad() || bias_.requires_grad()) {
+        out.set_requires_grad(true);
+    }
+
     return out;
 }
 

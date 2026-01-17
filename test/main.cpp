@@ -5,6 +5,7 @@
 #include "test_autodiff.cpp"
 #include "test_utils.cpp"
 #include "test_nn.cpp"
+#include "test_diffusion.cpp"
 
 // Temporal Layer 4 tests
 #include "test_frame_state.cpp"
