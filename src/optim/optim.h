@@ -20,7 +20,7 @@ public:
     float learning_rate() const { return learning_rate_; }
     
     // Register a parameter tensor for optimization
-    void register_parameter(const Tensor& param);
+    virtual void register_parameter(const Tensor& param);
     
     // Get the list of registered parameters
     const std::vector<Tensor>& parameters() const { return params_; }

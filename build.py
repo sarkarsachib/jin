@@ -180,6 +180,7 @@ def build_library(mode='release', backend='cpu'):
     src_files = []
     for subdir in ['core', 'autodiff', 'utils', 'temporal', 'scene']:
         src_files.extend(find_sources(SRC_DIR / subdir, '*.cpp'))
+        src_files.extend(find_sources(SRC_DIR / subdir, '*.mm'))
     
     if not src_files:
         print("No source files found!")
@@ -198,10 +199,15 @@ def build_library(mode='release', backend='cpu'):
         obj_files.append(obj_file)
     
     # Create static library
-    lib_file = LIB_DIR / f'libjin-core-{backend}.a'
+    if backend == 'cpu':
+        lib_file = LIB_DIR / 'libjin-core.a'
+    else:
+        lib_file = LIB_DIR / f'libjin-core-{backend}.a'
+
     if not link_library(obj_files, lib_file, backend):
         return False
-    
+
+    # For convenience, also produce a stable CPU-named artifact when building CPU.
     print(f"\n✓ Library built successfully: {lib_file}\n")
     return True
 
@@ -227,9 +233,13 @@ def build_tests(mode='release', backend='cpu'):
         return False
     
     # Link with library
-    lib_file = LIB_DIR / f'libjin-core-{backend}.a'
-    exe_file = BIN_DIR / f'test_jin_core_{backend}'
-    
+    if backend == 'cpu':
+        lib_file = LIB_DIR / 'libjin-core.a'
+        exe_file = BIN_DIR / 'test_jin_core'
+    else:
+        lib_file = LIB_DIR / f'libjin-core-{backend}.a'
+        exe_file = BIN_DIR / f'test_jin_core_{backend}'
+
     if not link_executable([test_obj], exe_file, [str(lib_file)], flags, backend):
         return False
     
@@ -369,12 +379,12 @@ def main():
         print("="*50)
         print(f"\nLibraries:")
         for b in backends:
-            lib_file = LIB_DIR / f'libjin-core-{b}.a'
+            lib_file = LIB_DIR / ('libjin-core.a' if b == 'cpu' else f'libjin-core-{b}.a')
             if lib_file.exists():
                 print(f"  {b.upper()}: {lib_file}")
         print(f"\nTests:")
         for b in backends:
-            exe_file = BIN_DIR / f'test_jin_core_{b}'
+            exe_file = BIN_DIR / ('test_jin_core' if b == 'cpu' else f'test_jin_core_{b}')
             if exe_file.exists():
                 print(f"  {b.upper()}: {exe_file}")
         print(f"\nRun tests with: python run_tests.py")

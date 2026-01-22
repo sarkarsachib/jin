@@ -55,19 +55,19 @@ struct FrameState {
         
         // Extract character latent
         if (latent_dim > 0 && offset + latent_dim <= tensor.size()) {
-            state.character_latent = tensor.view({latent_dim}).slice(offset, offset + latent_dim);
+            state.character_latent = tensor.view({static_cast<size_t>(latent_dim)}).slice(offset, offset + latent_dim);
             offset += latent_dim;
         }
         
         // Extract scene latent
         if (latent_dim > 0 && offset + latent_dim <= tensor.size()) {
-            state.scene_latent = tensor.view({latent_dim}).slice(offset, offset + latent_dim);
+            state.scene_latent = tensor.view({static_cast<size_t>(latent_dim)}).slice(offset, offset + latent_dim);
             offset += latent_dim;
         }
         
         // Extract motion code
         if (motion_dim > 0 && offset + motion_dim <= tensor.size()) {
-            state.motion_code = tensor.view({motion_dim}).slice(offset, offset + motion_dim);
+            state.motion_code = tensor.view({static_cast<size_t>(motion_dim)}).slice(offset, offset + motion_dim);
             offset += motion_dim;
         }
         
@@ -118,12 +118,12 @@ struct FrameState {
         
         if (character_latent.size() > 0 && other.character_latent.size() > 0) {
             Tensor diff = character_latent - other.character_latent;
-            dist += sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item());
+            dist += std::sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item());
         }
         
         if (scene_latent.size() > 0 && other.scene_latent.size() > 0) {
             Tensor diff = scene_latent - other.scene_latent;
-            dist += sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item());
+            dist += std::sqrt(jin::ops::sum(jin::ops::pow(diff, 2.0f)).item());
         }
         
         return dist;

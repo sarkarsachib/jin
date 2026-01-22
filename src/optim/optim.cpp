@@ -54,7 +54,7 @@ public:
     
     void step() override;
     
-    void register_parameter(const Tensor& param);
+    void register_parameter(const Tensor& param) override;
     
 private:
     float momentum_;
@@ -67,7 +67,7 @@ SGDImpl::SGDImpl(float learning_rate, float momentum, float weight_decay)
 
 void SGDImpl::register_parameter(const Tensor& param) {
     Optimizer::register_parameter(param);
-    Tensor vel({param.shape()}, param.dtype(), param.device());
+    Tensor vel(param.shape(), param.dtype(), param.device());
     vel.fill(0.0f);
     velocities_.push_back(vel);
 }
@@ -124,7 +124,7 @@ public:
     
     void step() override;
     
-    void register_parameter(const Tensor& param);
+    void register_parameter(const Tensor& param) override;
     
 private:
     float beta1_;
@@ -147,11 +147,11 @@ AdamImpl::AdamImpl(float learning_rate, float beta1, float beta2, float eps, flo
 void AdamImpl::register_parameter(const Tensor& param) {
     Optimizer::register_parameter(param);
     
-    Tensor m({param.shape()}, param.dtype(), param.device());
+    Tensor m(param.shape(), param.dtype(), param.device());
     m.fill(0.0f);
     m_.push_back(m);
     
-    Tensor v({param.shape()}, param.dtype(), param.device());
+    Tensor v(param.shape(), param.dtype(), param.device());
     v.fill(0.0f);
     v_.push_back(v);
 }
@@ -219,7 +219,7 @@ public:
     
     void step() override;
     
-    void register_parameter(const Tensor& param);
+    void register_parameter(const Tensor& param) override;
     
 private:
     float beta_;
@@ -232,7 +232,7 @@ LionImpl::LionImpl(float learning_rate, float beta, float weight_decay)
 
 void LionImpl::register_parameter(const Tensor& param) {
     Optimizer::register_parameter(param);
-    Tensor update({param.shape()}, param.dtype(), param.device());
+    Tensor update(param.shape(), param.dtype(), param.device());
     update.fill(0.0f);
     updates_.push_back(update);
 }
