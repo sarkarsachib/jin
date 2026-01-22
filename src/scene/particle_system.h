@@ -218,6 +218,7 @@ private:
     Tensor frequency_data_;
     float audio_sensitivity_ = 1.0f;
     std::vector<std::pair<float, float>> frequency_bands_;
+    mutable float base_emission_rate_ = 10.0f; // Store original emission rate for audio modulation
     
     float get_frequency_energy(const std::pair<float, float>& frequency_range) const;
 };

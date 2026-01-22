@@ -318,14 +318,41 @@ std::shared_ptr<ParticleSystem> ParticleSystem::create_dust_effect() {
     // Configure for dust effect
     emitter->set_emission_rate(3.0f);
     emitter->particle_lifetime = 3.0f;
-    emitter->start_color = Tensor({0.8f, 0.7f, 0.6f, 0.4f}); // Brownish, semi-transparent
-    emitter->end_color = Tensor({0.6f, 0.5f, 0.4f, 0.0f});   // Darker, transparent
-    emitter->initial_velocity = Tensor({0.5f, 0.0f});         // Slow horizontal movement
-    emitter->velocity_variance = Tensor({1.0f, 0.5f});       // Moderate variation
-    emitter->size_range = Tensor({1.0f, 4.0f});              // Variable size
+    // Create tensors with proper shape and fill with values
+    emitter->start_color = ones({4}) * 1.0f;
+    float* start_color_data = emitter->start_color.data_ptr<float>();
+    start_color_data[0] = 0.8f; start_color_data[1] = 0.7f;
+    start_color_data[2] = 0.6f; start_color_data[3] = 0.4f;
+    
+    emitter->end_color = ones({4}) * 1.0f;
+    float* end_color_data = emitter->end_color.data_ptr<float>();
+    end_color_data[0] = 0.6f; end_color_data[1] = 0.5f;
+    end_color_data[2] = 0.4f; end_color_data[3] = 0.0f;
+    
+    emitter->initial_velocity = ones({2}) * 1.0f;
+    float* vel_data = emitter->initial_velocity.data_ptr<float>();
+    vel_data[0] = 0.5f; vel_data[1] = 0.0f;
+    
+    emitter->velocity_variance = ones({2}) * 1.0f;
+    float* var_data = emitter->velocity_variance.data_ptr<float>();
+    var_data[0] = 1.0f; var_data[1] = 0.5f;
+    
+    emitter->size_range = ones({2}) * 1.0f;
+    float* size_data = emitter->size_range.data_ptr<float>();
+    size_data[0] = 1.0f; size_data[1] = 4.0f;
     
     system->add_emitter(emitter);
-    system->set_global_forces(Tensor({0.0f, -2.0f}), Tensor({0.0f, 0.0f})); // Gentle gravity
+    
+    // Set global forces
+    Tensor gravity = ones({2}) * 1.0f;
+    float* gravity_data = gravity.data_ptr<float>();
+    gravity_data[0] = 0.0f; gravity_data[1] = -2.0f;
+    
+    Tensor wind = ones({2}) * 1.0f;
+    float* wind_data = wind.data_ptr<float>();
+    wind_data[0] = 0.0f; wind_data[1] = 0.0f;
+    
+    system->set_global_forces(gravity, wind); // Gentle gravity
     system->set_render_mode(RenderMode::SPRITES);
     
     return system;

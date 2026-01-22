@@ -519,7 +519,7 @@ void AnimationController::update(class SceneGraph& scene_graph, float delta_time
     int current_frame = timeline.current_frame;
     
     for (const auto& animation : animations) {
-        if (animation->playing_) {
+        if (animation->is_playing()) {
             auto target_node = scene_graph.find_node(animation->target_node);
             if (target_node) {
                 animation->apply(current_frame, *target_node);

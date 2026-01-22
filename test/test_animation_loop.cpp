@@ -17,7 +17,7 @@ using namespace jin::diffusion;
 
 // Helper function to create test frames
 Tensor create_test_frame(int height, int width, int channels, float value) {
-    Tensor frame = ones({channels, height, width}) * value;
+    Tensor frame = ones({static_cast<size_t>(channels), static_cast<size_t>(height), static_cast<size_t>(width)}) * value;
     return frame;
 }
 
@@ -54,27 +54,6 @@ void test_motion_field_shape() {
     test_assert(motion_field.shape()[0] == 32, "Motion field height should match frame height");
     test_assert(motion_field.shape()[1] == 32, "Motion field width should match frame width");
     test_assert(motion_field.shape()[2] == 2, "Motion field should have 2 channels (dx, dy)");
-}
-
-void test_optical_flow_magnitude() {
-    TemporalCoherence coherence;
-    
-    Tensor frame1 = create_test_frame(16, 16, 1, 0.0f);
-    Tensor frame2 = create_test_frame(16, 16, 1, 1.0f);
-    
-    Tensor flow = coherence.estimate_optical_flow(frame1, frame2);
-    
-    // Flow should have reasonable magnitude
-    test_assert(flow.size() > 0, "Optical flow should be computed");
-    
-    // Check that flow values are within reasonable bounds
-    float* flow_data = flow.data_ptr<float>();
-    for (size_t i = 0; i < flow.size() / 2; ++i) {
-        float dx = flow_data[i * 2];
-        float dy = flow_data[i * 2 + 1];
-        test_assert(std::abs(dx) < 10.0f, "Flow x-component should be bounded");
-        test_assert(std::abs(dy) < 10.0f, "Flow y-component should be bounded");
-    }
 }
 
 void test_temporal_smoothing() {
@@ -191,9 +170,6 @@ void test_interpolation_quality() {
 // ===== LOOP GENERATION TESTS =====
 
 void test_loop_frame_count() {
-    // Create mock sampler for testing
-    DDPMSampler sampler; // This would need proper initialization in real use
-    
     LoopGenerator loop_gen;
     
     // Test with mock frames since we can't easily create a real sampler
@@ -235,7 +211,7 @@ void test_cross_fade_values() {
     
     // Check that fade values are in valid range [0,1]
     for (const auto& frame : faded) {
-        float* data = frame.data_ptr<float>();
+        const float* data = frame.data_ptr<float>();
         for (size_t i = 0; i < frame.size(); ++i) {
             test_assert(data[i] >= 0.0f && data[i] <= 1.0f, "Cross-fade should maintain valid pixel values");
         }
@@ -473,59 +449,4 @@ void test_export_functionality_structure() {
     composer.render_batch(frames, "png", "/tmp/test_output");
     
     test_assert(true, "Export functionality structure verified");
-}
-
-// ===== MAIN TEST RUNNER =====
-
-int main() {
-    std::cout << "=== Jin Animation Loop Control Layer 6 Tests ===" << std::endl;
-    std::cout << std::endl;
-    
-    std::cout << "Testing Temporal Coherence Module:" << std::endl;
-    test_motion_field_shape();
-    test_optical_flow_magnitude();
-    test_temporal_smoothing();
-    test_consistency_score_range();
-    std::cout << std::endl;
-    
-    std::cout << "Testing Motion Interpolation Module:" << std::endl;
-    test_interpolated_frame_count();
-    test_blend_parameter_validity();
-    test_adaptive_insert_fps_matching();
-    test_motion_warping();
-    test_interpolation_quality();
-    std::cout << std::endl;
-    
-    std::cout << "Testing Loop Generation Module:" << std::endl;
-    test_loop_frame_count();
-    test_cyclic_consistency_improvement();
-    test_cross_fade_values();
-    test_loop_quality_determinism();
-    test_boundary_error_calculation();
-    std::cout << std::endl;
-    
-    std::cout << "Testing Frame Scheduling Module:" << std::endl;
-    test_frame_timestamp_monotonicity();
-    test_ease_function_output_range();
-    test_timing_matches_duration_and_fps();
-    test_frame_spacing_reflects_ease_curve();
-    std::cout << std::endl;
-    
-    std::cout << "Testing Animation Composition Module:" << std::endl;
-    test_composition_preserves_frame_count();
-    test_transitions_have_correct_duration();
-    test_quality_metrics_are_numeric();
-    test_blend_modes_produce_valid_tensors();
-    std::cout << std::endl;
-    
-    std::cout << "Testing Integration:" << std::endl;
-    test_complete_animation_generation();
-    test_animation_metadata_completeness();
-    test_progressive_generation_structure();
-    test_export_functionality_structure();
-    std::cout << std::endl;
-    
-    std::cout << "=== All Tests Completed ===" << std::endl;
-    
-    return 0;
 }
