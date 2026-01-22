@@ -19,6 +19,9 @@
 #include "test_consistency_loss.cpp"
 #include "test_long_sequence.cpp"
 
+// Animation Loop Control Layer 6 tests
+#include "test_animation_loop.cpp"
+
 int main(int argc, char** argv) {
     std::string filter = "";
     

@@ -19,12 +19,12 @@ Tensor concatenate(const std::vector<Tensor>& tensors, int dim) {
     size_t offset = 0;
     
     for (const auto& tensor : tensors) {
-        size_t tensor_size = tensor.size() * sizeof(float);
-        std::memcpy(
-            static_cast<char*>(result.data()) + offset,
-            tensor.data(),
-            tensor_size
-        );
+        const float* src_data = tensor.data_ptr<float>();
+        float* dst_data = result.data_ptr<float>();
+        
+        for (size_t i = 0; i < tensor.size(); ++i) {
+            dst_data[offset + i] = src_data[i];
+        }
         offset += tensor.size();
     }
     
