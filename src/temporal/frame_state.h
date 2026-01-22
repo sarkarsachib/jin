@@ -9,7 +9,7 @@
 namespace jin {
 namespace temporal {
 
-// Forward declaration of concatenate function
+// Forward declaration for concatenate function
 Tensor concatenate(const std::vector<Tensor>& tensors, int dim);
 
 struct FrameState {

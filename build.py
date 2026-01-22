@@ -178,7 +178,7 @@ def build_library(mode='release', backend='cpu'):
     
     # Find source files
     src_files = []
-    for subdir in ['core', 'autodiff', 'utils', 'nn', 'optim', 'diffusion', 'temporal', 'audio', 'render']:
+    for subdir in ['core', 'autodiff', 'utils', 'temporal', 'scene']:
         src_files.extend(find_sources(SRC_DIR / subdir, '*.cpp'))
         src_files.extend(find_sources(SRC_DIR / subdir, '*.mm'))
     
