@@ -1,5 +1,6 @@
 #include "layer_stack.h"
 #include <iostream>
+#include <set>
 
 namespace jin {
 namespace scene {
